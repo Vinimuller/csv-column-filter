@@ -2,7 +2,7 @@ import csv
 import os
 import time
 
-def filter_csv(input_file, columns_to_keep, row_filter=None):
+def filter_csv(input_file, columns_to_keep, row_filter=None, separator=","):
     output_file = os.path.join(
         os.path.dirname(input_file),
         "filtered_" + os.path.basename(input_file)
@@ -11,7 +11,7 @@ def filter_csv(input_file, columns_to_keep, row_filter=None):
     row_count = 0
     kept_rows = 0
     with open(input_file, mode="r", encoding="ISO-8859-1", newline="") as infile:
-        reader = csv.DictReader(infile)
+        reader = csv.DictReader(infile, delimiter=separator)
         filtered_fieldnames = [col for col in reader.fieldnames if col in columns_to_keep]
 
         with open(output_file, mode="w", encoding="ISO-8859-1", newline="") as outfile:
@@ -49,8 +49,13 @@ def main():
 
     input_size = os.path.getsize(input_file)
 
+    sep_input = input("Enter separator (press Enter for comma): ").strip()
+    separator = sep_input if sep_input else ","
+    if separator == "\\t":
+        separator = "\t"
+
     with open(input_file, mode="r", encoding="ISO-8859-1", newline="") as infile:
-        reader = csv.DictReader(infile)
+        reader = csv.DictReader(infile, delimiter=separator)
         all_columns = reader.fieldnames
 
     if not all_columns:
@@ -61,9 +66,19 @@ def main():
     for i, col in enumerate(all_columns):
         print(f"{i}: {col}")
 
+    default_indices = [1, 11, 12, 14, 16, 27, 30, 31]
+    default_valid = [i for i in default_indices if i < len(all_columns)]
+    default_names = [all_columns[i] for i in default_valid]
+    default_str = ",".join(str(i) for i in default_valid)
+    print(f"\nDefault suggestion: {default_str}")
+    for i, name in zip(default_valid, default_names):
+        print(f"  {i}: {name}")
+
     cols_input = input(
-        "\nEnter column numbers or names to keep (comma-separated): "
-    )
+        f"\nEnter column numbers or names to keep (comma-separated) [default: {default_str}]: "
+    ).strip()
+    if not cols_input:
+        cols_input = default_str
 
     selected_columns = []
     for item in cols_input.split(","):
@@ -102,7 +117,7 @@ def main():
         # Collect unique values from that column
         unique_values = set()
         with open(input_file, mode="r", encoding="ISO-8859-1", newline="") as infile:
-            reader = csv.DictReader(infile)
+            reader = csv.DictReader(infile, delimiter=separator)
             for row in reader:
                 unique_values.add(row[filter_col])
 
@@ -119,7 +134,7 @@ def main():
     # Process
     start_time = time.time()
     output_file, kept_cols, total_rows, kept_rows, total_cols = filter_csv(
-        input_file, selected_columns, row_filter
+        input_file, selected_columns, row_filter, separator
     )
     elapsed = time.time() - start_time
     output_size = os.path.getsize(output_file)
